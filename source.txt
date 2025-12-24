@@ -1,6 +1,0 @@
-Used packages:
-stringr
-tidyverse
-rvest
-janitor
-httr2
