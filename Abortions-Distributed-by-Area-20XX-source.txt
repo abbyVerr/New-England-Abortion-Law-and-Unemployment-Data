@@ -21,3 +21,5 @@ read_file <- function(year){
 }
 
 all_abortion_data <- map_dfr(2011:2022,read_file)
+
+path: "~\Documents\New England State Abortion Unemployment and Abortion Law\Abortions-Distributed-by-Area-20XX.csv"
