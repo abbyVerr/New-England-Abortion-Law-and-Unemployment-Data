@@ -1,0 +1,362 @@
+---
+title: "AbortionByState"
+format: html
+editor: visual
+---
+
+# Imports
+
+## Packages
+
+```{r}
+#install.packages("tidyverse")
+#install.packages("rvest")
+#install.packages("janitor")
+#install.packages("stringr")
+#install.packages("httr2")
+library(stringr)
+library(tidyverse)
+library(rvest)
+library(janitor)
+library(httr2)
+```
+
+## Laws by State
+
+```{r}
+law_data_raw <- read_csv("raw_data.csv")
+```
+
+## Unemployment by State
+
+```{r}
+key="05ec8ecf241642429022e023379cbb21"
+url="https://api.bls.gov/publicAPI/v2/timeseries/data/"
+ma_id="LAUST250000000000003"
+me_id="LAUST230000000000003"
+nh_id="LAUST330000000000003"
+vt_id="LAUST500000000000003"
+ri_id="LAUST440000000000003"
+ct_id="LAUST090000000000003"
+
+ma_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(ma_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+
+me_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(me_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+
+nh_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(nh_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+
+ct_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(ct_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+
+ri_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(ri_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+
+vt_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(vt_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+```
+
+## Abortion Data By State
+
+```{r}
+new_england=c("Maine","Vermont","New Hampshire","Massachusetts","Connecticut","Rhode Island")
+
+read_file <- function(year){
+  file_name=str_c("Abortions-Distributed-by-Area-",year,".csv")
+  read_csv(file_name) |>
+    rename(data=contains("These data are consistent with"))|>
+    mutate(year=year)|>
+    select(2,60,year)|>
+    rename(state=contains("2"),total=contains("60"))|>
+    filter(state%in%new_england|str_detect(state,pattern="New Hamp"))
+}
+
+all_abortion_data <- map_dfr(2011:2022,read_file)
+```
+
+# Cleaning
+
+## Laws by State
+
+```{r}
+#separating by columns, getting all text together
+law_data_raw|>
+  #fix names
+  clean_names() |>
+  rename(title=
+title_abortion_policy_gestational_limits_and_exceptions_kff_state_health_facts) |>
+  #get rid of meta-data
+  slice(4:54) |>
+  #separate columns by commas
+  separate_wider_delim(title,delim=",",names_sep="_",too_few="align_start") |>
+  select(!(title_8)) |>
+  #put all text in one column
+  pivot_longer(cols=3:7,names_to="titles", values_to="values")|>
+  #remove useless column
+  select(!(titles)) |>
+  filter(case_when(
+    is.na(values) ~FALSE,
+    .default = TRUE
+  )) |>
+  #group by state
+  group_by(title_1,title_2)|>
+  #combine text for a state to one cell
+  summarize(all_text=str_c(values,collapse=" "))|>
+  #add the delimiter "$" before the second capital letter, separating exceptions and legal standards
+  mutate(all_text_delim=str_replace(all_text,pattern=regex("(\\s)(Reasonable|Good|Best|No|Professional|Appropriate)"),replacement="\\1$\\2")) |>
+  #separating using the new delimiter
+  separate(col=all_text_delim,into=c("exceptions","legal_standard"), sep="\\$") |>
+  #keep all needed columns
+  select(!(all_text)) |>
+  #boolean column telling if the state has an exception for general health risks 
+  mutate(general_health_exception=(
+    str_detect(exceptions,"health")|is.na(legal_standard)
+  ))|>
+  #column telling if the state has an exception for lethal fetal anomolies, the number being the number of weeks after the woman's last period within which an abortion is still available
+  mutate(lethal_fetal_anomoly_exception=
+    case_when(
+      #florida says "second trimester"
+      str_detect(title_1,"Florida") ~27,
+      str_detect(exceptions,
+                 pattern="anomalies \\(up to [0-9][0-9]")
+~as.integer(str_extract(exceptions,pattern="(?<=anomalies \\(up to) [0-9][0-9]")),
+# some don't specify a number of weeks
+      str_detect(exceptions,"anomal")|is.na(legal_standard) ~40,
+#doesn't have this exception
+      .default=0)) |>
+  #column telling if the state has an exception for rape\incest, the number being the number of weeks after the woman's last period within which an abortion is  stillavailable
+  mutate(rape_exception_a=if_else(
+    str_detect(exceptions,"rape"),
+    #we can use the first two numbers because there is never a case where the number of weeks for lethal fetal anomaly is listed before the number of weeks for rape
+    as.integer(str_extract(exceptions,pattern="[0-9][0-9]?")),
+    0
+  )) |>
+  #idaho says "first trimester" and Nebraska doesn't limit it
+  mutate(rape_or_incest_exception=case_when(
+    str_detect(title_1,"Idaho") ~13,
+    str_detect(title_1,"Nebraska")|is.na(legal_standard) ~40,
+    .default = rape_exception_a
+  )) |>
+  #select useful columns
+  select(!(c(exceptions,rape_exception_a)))|>
+  #fix titles
+  rename(state=title_1)|>
+  #make qualitative variables numerical
+  mutate(legal_standard=case_when(
+    str_detect(legal_standard,"Prof")|str_detect(legal_standard,"Best") ~0,
+    str_detect(legal_standard,"Rea")|str_detect(legal_standard,"Good")|str_detect(legal_standard,"Appr") ~0.5,
+    str_detect(legal_standard,"No")|is.na(legal_standard) ~1,
+    .default = NA)
+    )|>
+  #clean general limit
+  mutate(general=case_when(
+    str_detect(title_2,pattern="Abortion banned") ~"Ban",
+    str_detect(title_2,pattern="Fetal viability") ~"Viability",
+    str_detect(title_2,pattern="No gestational limit") ~"No Limit",
+    str_detect(state,pattern="Virginia") ~"No Limit",
+    str_detect(title_2,pattern="[0-9]") ~str_extract(title_2,pattern="[0-9][0-9]? weeks")
+  )) |>
+  #make general limit numeric
+  mutate(general_numeric=case_when(
+    str_detect(general,pattern="Ban") ~0,
+    str_detect(general,pattern="Viability") ~24,
+    str_detect(general,pattern="No Limit") ~40,
+    str_detect(general,pattern="[0-9]") ~as.integer(str_extract(general,pattern="[0-9][0-9]?"))
+     ))|>
+  #don't use unecessary columns
+  select(!(title_2))|>
+  #keep only states in New England
+  filter(state %in% new_england)-> law_data_fin
+
+write_csv(law_data_fin,"abortion_law_by_state.csv")
+```
+
+## Unemployment by State
+
+```{r}
+ma_unemployment <- tibble(info=ma_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+
+  me_unemployment <- tibble(info=me_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+
+  nh_unemployment <- tibble(info=nh_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+
+  ct_unemployment <- tibble(info=ct_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+
+  ri_unemployment <- tibble(info=ri_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+
+  vt_unemployment <- tibble(info=vt_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+```
+
+### Combining Unemployment Data
+
+```{r}
+unemployment = list(
+  ct = ct_unemployment,
+  ma = ma_unemployment,
+  me = ma_unemployment,
+  nh = nh_unemployment,
+  ri = ri_unemployment,
+  vt = vt_unemployment
+)
+
+unemployment_yearly <- function(state){
+  unemployment[[state]]|>
+      mutate(value_num=as.numeric(value),state=state,year=as.integer(year))|>
+    select(state,year,value_num)|>
+    group_by(state,year)|>
+    summarize(avg_unemployment=mean(value_num,na.rm=TRUE),.groups="drop")|>
+    mutate(state=case_when(
+      str_detect(state,"ma") ~"Massachusetts",
+      str_detect(state,"me") ~"Maine",
+      str_detect(state,"nh") ~"New Hampshire",
+      str_detect(state,"vt") ~"Vermont",
+      str_detect(state,"ri") ~"Rhode Island",
+      str_detect(state,"ct") ~"Connecticut",
+    ))
+}
+
+all_unemployment <- map_dfr(names(unemployment),unemployment_yearly)
+
+write.csv(all_unemployment,"unemployment_by_state.csv")
+```
+
+## Abortion Data By State
+
+```{r}
+read_file <- function(year){
+  file_name=str_c("Abortions-Distributed-by-Area-",year,".csv")
+  read_csv(file_name) |>
+    rename(data=contains("These data are consistent with"))|>
+    mutate(year=year)|>
+    select(2,60,year)|>
+    rename(state=contains("2"),total=contains("60"))|>
+    filter(state%in%new_england|str_detect(state,pattern="New Hamp"))
+  }
+
+all_abortion_data <- all_abortion_data|>
+  mutate(abortions=case_when(
+    str_detect(total,pattern="[0-9]") ~total,
+    .default=NA
+  ))|>
+  mutate(state=case_when(
+    str_detect(state,"New H") ~"New Hampshire",
+    .default = state
+  ))
+
+write.csv(all_abortion_data,"abortion_by_state.csv")
+```
+
+## Combining All Data Using Common Columns
+
+```{r}
+full_join(all_abortion_data,all_unemployment) ->new_england_unemployment_abortion
+
+full_join(new_england_unemployment_abortion,law_data_fin)|>
+  select(!(total))|>
+  mutate(state=factor(state,
+                      levels=c("Massachusetts","New Hampshire","Connecticut","Vermont","Rhode Island","Maine"),
+                      labels=c("Massachusetts","New Hampshire","Connecticut","Vermont","Rhode Island","Maine"))) |>
+  mutate(year=as.integer(year))|>
+  mutate(abortions=as.integer(str_replace(abortions,",","")))|>
+  mutate(legal_standard=as.numeric(legal_standard))|>
+  mutate(lethal_fetal_anomoly_exception=as.integer(lethal_fetal_anomoly_exception))|>
+  mutate(rape_or_incest_exception=as.integer(rape_or_incest_exception))|>
+  mutate(general_numeric=as.integer(general_numeric))|>
+  select(!(general))-> unemployment_abortion_law
+
+write_csv(unemployment_abortion_law,"ne_unemployment_abortion_law.csv")
+
+ne_unemployment_abortion_law
+```
