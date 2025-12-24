@@ -1,0 +1,24 @@
+Using packages
+stringr
+tidyverse
+rvest
+janitor
+httr2
+
+Combining previous data to make ne_employment_abortion_law:
+full_join(all_abortion_data,all_unemployment) ->new_england_unemployment_abortion
+
+full_join(new_england_unemployment_abortion,law_data_fin)|>
+  select(!(total))|>
+  mutate(state=factor(state,
+                      levels=c("Massachusetts","New Hampshire","Connecticut","Vermont","Rhode Island","Maine"),
+                      labels=c("Massachusetts","New Hampshire","Connecticut","Vermont","Rhode Island","Maine"))) |>
+  mutate(year=as.integer(year))|>
+  mutate(abortions=as.integer(str_replace(abortions,",","")))|>
+  mutate(legal_standard=as.numeric(legal_standard))|>
+  mutate(lethal_fetal_anomoly_exception=as.integer(lethal_fetal_anomoly_exception))|>
+  mutate(rape_or_incest_exception=as.integer(rape_or_incest_exception))|>
+  mutate(general_numeric=as.integer(general_numeric))|>
+  select(!(general))-> unemployment_abortion_law
+
+write_csv(unemployment_abortion_law,"ne_unemployment_abortion_law.csv")
