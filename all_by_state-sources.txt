@@ -1,0 +1,29 @@
+Using packages
+stringr
+tidyverse
+rvest
+janitor
+httr2
+
+Cleaning all_abortion_data tibble:
+read_file <- function(year){
+  file_name=str_c("Abortions-Distributed-by-Area-",year,".csv")
+  read_csv(file_name) |>
+    rename(data=contains("These data are consistent with"))|>
+    mutate(year=year)|>
+    select(2,60,year)|>
+    rename(state=contains("2"),total=contains("60"))|>
+    filter(state%in%new_england|str_detect(state,pattern="New Hamp"))
+  }
+
+all_abortion_data <- all_abortion_data|>
+  mutate(abortions=case_when(
+    str_detect(total,pattern="[0-9]") ~total,
+    .default=NA
+  ))|>
+  mutate(state=case_when(
+    str_detect(state,"New H") ~"New Hampshire",
+    .default = state
+  ))
+
+write.csv(all_abortion_data,"abortion_by_state.csv")
