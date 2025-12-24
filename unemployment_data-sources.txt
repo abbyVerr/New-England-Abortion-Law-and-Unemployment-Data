@@ -1,0 +1,79 @@
+unemployment_data-sources.txt
+No file data, made directly into a tibble using an API
+
+BLS API endpoint used: https://api.bls.gov/publicAPI/v2/timeseries/data/
+API documentation at: https://www.bls.gov/developers/api_signature_v2.htm
+
+Accessed and Imported 12/22/2025
+
+Import Script:
+key=[API key]*
+url="https://api.bls.gov/publicAPI/v2/timeseries/data/"
+ma_id="LAUST250000000000003"
+me_id="LAUST230000000000003"
+nh_id="LAUST330000000000003"
+vt_id="LAUST500000000000003"
+ri_id="LAUST440000000000003"
+ct_id="LAUST090000000000003"
+
+ma_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(ma_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+
+me_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(me_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+
+nh_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(nh_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+
+ct_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(ct_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+
+ri_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(ri_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+
+vt_unemployment <-request(url) |>
+  req_body_json(list(
+    seriesid=list(vt_id),
+    startyear="2011",
+    endyear="2022",
+    registrationkey=key
+    )) |>
+  req_perform() |>
+  resp_body_json()
+
+*[API key] replaced with a real API key in quotation marks
