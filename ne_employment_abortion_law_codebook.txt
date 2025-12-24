@@ -1,0 +1,12 @@
+  state - factor,nominal - The name of the U.S. state in which the observation's data was recorded
+  year - integer - The year in which the observation's date was recorded
+  abortions - integer - The number of abortions performed in the given state and year as reported by the CDC
+  avg_unemployment - double,continuous - The average unemployment over a year in a given state as reported by 
+  legal_standard - double,discrete - A number between 0 and 1 rating how strict the legal stadard for a life/health exception is, 0 for least strict, 1 for most strict,
+                                    1 is "Professional judgement" or "Best Medical Judgement", 0.5 is "Reasonable Medical Judgement","Good Faith Judgement", or "Appropriate Medical Judgement", 
+                                    2 is "No Standard Stated" or NA because the state has no statutory limit on abortions
+  general_health_exception - boolean - TRUE means the state has an exception past the statutory limit for cases of general health risk,
+                                       FALSE means the state has an exception past the statutory limit only for physical health risks and does not accomodate for mental health risks
+  lethal_fetal_anomoly_exception - integer - The statutory limit for abortions in cases where there is a fetal anomoly that poses a lethal risk to the fetus, measures in weeks
+  rape_or_incest_exception - integer - The statutory limit for abortions in cases of conception by rape or involvong incest, measures in weeks
+  general_numeric - integer - The statutory limit for abortions in most cases, measures in weeks
