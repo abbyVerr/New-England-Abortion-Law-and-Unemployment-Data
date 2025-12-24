@@ -1,0 +1,5 @@
+Abortions Distributed by Area Excel Documents are from the CDC, at "https://www.cdc.gov/reproductive-health/data-statistics/abortion-surveillance-findings-reports.html".
+
+raw_data.csv, containing information about abortion laws by state, are from the KFF at "kff.org/state-health-policy-data/state-indicator/gestational-limit-abortions/?currentTimeframe=0&sortModel=%7B"colId":"Location","sort":"asc"%7D#".
+
+Unemployment rate data (not imported as a dataset) is from the BLS API endpoint at "https://api.bls.gov/publicAPI/v2/timeseries/data/" with documentation at "https://www.bls.gov/developers/api_signature_v2.htm".
