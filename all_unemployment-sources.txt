@@ -1,0 +1,97 @@
+Using packages
+stringr
+tidyverse
+rvest
+janitor
+httr2
+
+(Cleaning tibbles ma_unemployment, me_unemployment, nh_unemployment, ri_unemployment, and ct_unemployment)
+Cleaning unemployment data:
+ma_unemployment <- tibble(info=ma_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+
+  me_unemployment <- tibble(info=me_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+
+  nh_unemployment <- tibble(info=nh_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+
+  ct_unemployment <- tibble(info=ct_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+
+  ri_unemployment <- tibble(info=ri_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+
+  vt_unemployment <- tibble(info=vt_unemployment)|>
+  slice(4) |>
+  unnest_longer(col=info)|>
+  unnest_longer(col=info)|>
+  unnest_wider(col=info)|>
+  select(data)|>
+  unnest_longer(col=data)|>
+  unnest_wider(col=data)|>
+  select(year,period,value)
+
+unemployment = list(
+  ct = ct_unemployment,
+  ma = ma_unemployment,
+  me = ma_unemployment,
+  nh = nh_unemployment,
+  ri = ri_unemployment,
+  vt = vt_unemployment
+)
+
+unemployment_yearly <- function(state){
+  unemployment[[state]]|>
+      mutate(value_num=as.numeric(value),state=state,year=as.integer(year))|>
+    select(state,year,value_num)|>
+    group_by(state,year)|>
+    summarize(avg_unemployment=mean(value_num,na.rm=TRUE),.groups="drop")|>
+    mutate(state=case_when(
+      str_detect(state,"ma") ~"Massachusetts",
+      str_detect(state,"me") ~"Maine",
+      str_detect(state,"nh") ~"New Hampshire",
+      str_detect(state,"vt") ~"Vermont",
+      str_detect(state,"ri") ~"Rhode Island",
+      str_detect(state,"ct") ~"Connecticut",
+    ))
+}
+
+all_unemployment <- map_dfr(names(unemployment),unemployment_yearly)
+
+write.csv(all_unemployment,"unemployment_by_state.csv")
