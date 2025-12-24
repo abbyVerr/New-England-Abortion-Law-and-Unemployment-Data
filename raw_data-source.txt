@@ -1,0 +1,13 @@
+raw_data-source.txt
+raw_data.csv
+
+From the KFF at kff.org/state-health-policy-data/state-indicator/gestational-limit-abortions/?currentTimeframe=0&sortModel=%7B"colId":"Location","sort":"asc"%7D#
+
+The csv file used here can be downloaded directly from the given webpage.
+
+Accessed and Imported 12/22/2025
+
+Import script:
+law_data_raw <- read_csv("raw_data.csv")
+
+path: "~\Documents\New England State Abortion Unemployment and Abortion Law\raw_data.csv"
