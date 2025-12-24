@@ -1,0 +1,7 @@
+state,legal_standard,physical_health_exception,general_health_exception,lethal_fetal_anomoly_exception,rape_or_incest_exception,general,general_numeric
+Connecticut,2,FALSE,TRUE,0,0,Viability,24
+Maine,0,TRUE,FALSE,0,0,Viability,24
+Massachusetts,0,FALSE,TRUE,40,0,24 weeks,24
+New Hampshire,2,FALSE,TRUE,40,0,24 weeks,24
+Rhode Island,1,FALSE,TRUE,0,0,Viability,24
+Vermont,2,TRUE,TRUE,40,40,No Limit,40
